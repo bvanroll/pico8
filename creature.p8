@@ -68,7 +68,6 @@ end
 -->8
 --npc
 p = { --player
-  hmap={},
   x=64,
   y=64,
   w=4,
@@ -79,18 +78,16 @@ p = { --player
   yv = 0,
   s=1,
   xo=2,
+  ctile={x=8,y=8},
+  ptile={x=8,y=8},
   draw = function(self)
    if (self.dy>0) then
-   printh(self.dy)
     s=193
    elseif (self.dy<0) then
-   printh(self.dy)
     s=194
    elseif (self.dx>0) then
-   printh(self.dx)
     s=196
    elseif (self.dx<0) then
-   printh(self.dx)
     s=195
    else
     s=192
@@ -100,7 +97,15 @@ p = { --player
   input = function(self, xv, yv)
    self.dx=xv
    self.dy=yv
-  
+   self.ctile.x=flr(self.x/8)
+   self.ctile.y=flr(self.y/8)
+   --it's not fast enough
+   if self.ctile.x!=self.ptile.x 
+   or self.ctile.y!=self.ptile.y then
+     m:calcmap()
+     self.ptile.x = self.ctile.x
+     self.ptile.y = self.ctile.y
+   end
    self.xv = xv
    self.yv = yv
   end,
@@ -122,27 +127,38 @@ k={ --him
  t = 0,
  speed=.1,
  target={x=-1,y=-1},
- mv=function(self)
-	  local bdst,bx,by =32000,0,0
-	  for i=1,4 do
-	   local dx,dy=dirx[i]+self.x,diry[i]+self.y
-		  if (not shit(dx,dy,0)) then
-		   d=dist(dx/8,dy/8,p.x/8,p.y/8)
-		   if d<bdst then
---		    printh(bdst)
-		    bdst,bx,by=d,dirx[i],diry[i]
-		   end
-		  end 
-	  end
---	  printh("xdir:"..xdir)
+ mv=function(self)--move
 
---	  if (abs(xdir)>self.speed) xdir=self.speed*sgn(xdir)
-	  self.x+=bx*self.speed
---	  ydir=self.target.y-self.y
---	  printh("ydir:"..ydir)
---	  if (abs(ydir)>self.speed) ydir=self.speed*sgn(ydir)
-	  self.y+=by*self.speed
-	 
+  if (self.target.x ==-1) then 
+   self:tget()
+  else 
+  printh(self.target.x)
+  
+   self.x=self.target.x
+   self.y=self.target.y
+  end
+ end,
+ tget=function(self)--find target
+	  if onscreen(self) then
+
+	    sx,sy=flr(self.x/8),flr(self.y/8)
+
+     lowest,tx,ty=32000,0,0
+	    if (m.dmap[sx][sy+1]<lowest) lowest,tx,ty=m.dmap[sx][sy+1],sx,sy+1
+	    if (m.dmap[sx][sy-1]<lowest) lowest,tx,ty=m.dmap[sx][sy-1],sx,sy-1
+	    if (m.dmap[sx+1][sy]<lowest) lowest,tx,ty=m.dmap[sx+1][sy],sx+1,sy
+	    if (m.dmap[sx-1][sy]<lowest) lowest,tx,ty=m.dmap[sx-1][sy],sx-1,sy
+     if (lowest<m.dmap[sx][sy])  then
+      printh(lowest)
+      self.target.x,self.target.y=tx,ty
+      self.target.x*=8
+      self.target.y*=8
+     else
+       printh(lowest)
+     end
+
+	    
+	  end
  end,
  growtime=3.600, 
  update = function(self,start,current)
@@ -160,16 +176,24 @@ k={ --him
    else
      self.s=4
    end
+   --if player touch
    if flr(p.x/8)==flr(self.x/8) and flr(p.y/8)==flr(self.y/8) then
      self.x=64+(128*(flr(rnd(2))))
      self.y=64+(128*(flr(rnd(2))))
      self.m+=1
+     printh("didler")
      fx=3/self.growtime*self.t
      sfx(flr(3/self.growtime*self.t),-1,0,0)
    end
  end,
  draw = function(self)
-   self:mv()
+   if (self.x!=self.target.x) and 
+    (self.y!=self.target.y) then
+    self:mv()
+   else
+    self:tget()
+    self:mv()
+   end
    spr(self.s,self.x,self.y)
  end,
  save=function(self)
@@ -180,6 +204,9 @@ k={ --him
 -->8
 --map
 m = { --map
+  bounds={ --map bounds /8
+  0,0,47,31
+  },
   cx=0,--camera x
   cy=0,--camera y
   --camera velocity
@@ -189,6 +216,55 @@ m = { --map
   tx=0,
   ty=0,
   t=false,--transition
+  dmap={{}},--dijkstra map
+  calcmap=function(self)
+   local dmap={{}}
+   for x=0,self.bounds[3] do
+    ty={}
+    for y=0,self.bounds[4] do
+     ty[y]=30000
+    end
+    dmap[x]=ty
+   end
+   dmap[flr(p.x/8)][flr(p.y/7)]=0
+   nochange=false
+   repeat
+    ccount=0
+    for x=self.cx/8,(self.cx+127)/8 do
+     for y=self.cy/8,(self.cy+127)/8 do
+      if not fget(mget(x,y),0) 
+      and dmap[x][y]>0 then
+       --not wall nor player
+       c=dmap[x][y]
+       u=dmap[x][y+1]
+       d=dmap[x][y-1]
+       r=dmap[x+1][y]
+       l=dmap[x-1][y]
+       lowest=c
+       printh("lets start, c:"..lowest)
+       lowest=min(lowest,u)
+       printh(lowest)
+       lowest=min(lowest,d)
+       printh(lowest)
+       lowest=min(lowest,l)
+       printh(lowest)
+       lowest=min(lowest,r)
+       printh(lowest)
+       --skip if change set
+        --set current to +1 lowest if true
+       lowest+=1
+       if (c>lowest) then
+        ccount+=1
+        dmap[x][y]=lowest
+        printh("final:"..dmap[x][y])
+       end
+      end
+     end
+    end
+    printh(ccount)
+   until ccount==0
+   self.dmap=dmap
+  end,
   update= function(self)
     tile = (mget(p.x/8,p.y/8))
     f=fget(tile)
@@ -297,9 +373,6 @@ end
 --distance based on pytho
 function dist(x1,y1,x2,y2)
  local dx,dy=x1-x2,y1-y2
--- printh("x1: "..x1.."y1: "..y1)
--- printh("x2: "..x2.."y2: "..y2)
--- printh(x1 .. yb1 ..x2 ..y2)
  f=(dx*dx+dy*dy)
  return f
 end
@@ -369,6 +442,22 @@ function tts()
 
 
  return temp
+end
+
+function onscreen(obj)
+
+ return obj.x>=m.cx and
+  obj.y>=m.cy and
+  obj.x<=m.cx+128 and
+  obj.y<=m.cy+128
+end
+
+function movetowards(sx,sy,tx,ty)
+ x=sx-tx
+ y=sy-ty
+ dx=abs(x)
+ dy=abs(y)
+ return dx*sgn(x)*s,dy*sgn(y)
 end
 -->8
 --state
