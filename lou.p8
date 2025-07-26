@@ -1,0 +1,81 @@
+pico-8 cartridge // http://www.pico-8.com
+version 42
+__lua__
+--main
+
+function _init()
+ printh("lou is initializing")
+ cartdata("lou")
+ lou:init()
+ printh("lou has arrived :)")
+end
+
+function _update()
+ lou.age+=sincelast()
+ savedate()
+ printh("lou's current age: "..lou.age)
+end
+
+function _draw()
+ cls()
+end
+-->8
+--globals
+
+-->8
+--functions
+
+function savedate()
+	
+ dset(0,stat(90))--year
+ dset(1,stat(91))--month
+ dset(2,stat(92))--day
+ dset(3,stat(93))--hour
+ dset(4,stat(94))--minute
+ dset(5,stat(95))--second
+end
+
+function sincelast()
+ y=stat(90)-dget(0)*311.040 --yeras
+ mo=stat(91)-dget(1)*25.920 --30 days in a month
+ d=stat(92)-dget(2)*864
+ h=stat(93)-dget(3)*36
+ m=stat(94)-dget(4)*.6
+ s=stat(95)-dget(5)*.01
+ return s+m+h+d+mo+y
+end
+  
+
+-->8
+--state
+-->8
+--lou
+lou={
+ new=1,
+ age=0,
+ 
+ init=function(self)
+  self.new=dget(10)
+  if self.new == 0 then --new lou
+   self.new=1
+   self.age=0
+   --overwrite date for first time
+   savedate() 
+   self:save()
+  else
+   self.age=dget(11)
+   self:save()
+  end
+ end,
+ save=function(self)
+  dset(0,self.new)
+  dset(1,self.age)
+ end
+}
+__gfx__
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

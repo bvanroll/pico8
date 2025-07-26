@@ -24,7 +24,7 @@ function _init()
  cartdata("savedgame")
  timeset = dget(0)
  stime=dt:new()
- 
+ dc=time()
  if (timeset==0) then
   stime:from(currenttime())
 --  printh("save:"..stime:tostring())
@@ -37,12 +37,16 @@ function _init()
 
  cls()
 -- printh("goaltime"..goaltime)
+ m:ctmap()
+
  m:draw()
  ui:draw()
-
 end
 
-function _update60()
+function _update()
+ dc=time()
+ delta=dc-dp
+ dp=dc
  ctime=dt:new()
  m:update()
  ctime:from(currenttime())
@@ -125,41 +129,55 @@ k={ --him
  y=64,
  m=1, --modifier
  t = 0,
- speed=.1,
+ speed=3,
  target={x=-1,y=-1},
  mv=function(self)--move
-
+  --bro what the fuck am i doing
   if (self.target.x ==-1) then 
    self:tget()
   else 
-  printh(self.target.x)
-  
-   self.x=self.target.x
-   self.y=self.target.y
+   printh(self.target.x)
+   printh(self.target.y)
+   tx=self.x-self.target.x
+   ty=self.target.y-self.y
+   if (abs(tx)>0) or (abs(ty)>0) then
+    --hit detection neede
+    self.x+=sgn(tx)*self.speed
+    self.y+=sgn(ty)*self.speed
+    printh(self.x)
+    printh(self.y)
+   end
   end
  end,
  tget=function(self)--find target
-	  if onscreen(self) then
-
-	    sx,sy=flr(self.x/8),flr(self.y/8)
-
-     lowest,tx,ty=32000,0,0
-	    if (m.dmap[sx][sy+1]<lowest) lowest,tx,ty=m.dmap[sx][sy+1],sx,sy+1
-	    if (m.dmap[sx][sy-1]<lowest) lowest,tx,ty=m.dmap[sx][sy-1],sx,sy-1
-	    if (m.dmap[sx+1][sy]<lowest) lowest,tx,ty=m.dmap[sx+1][sy],sx+1,sy
-	    if (m.dmap[sx-1][sy]<lowest) lowest,tx,ty=m.dmap[sx-1][sy],sx-1,sy
-     if (lowest<m.dmap[sx][sy])  then
-      printh(lowest)
-      self.target.x,self.target.y=tx,ty
-      self.target.x*=8
-      self.target.y*=8
-     else
-       printh(lowest)
-     end
-
-	    
+	 if onscreen(self) then
+	  sx,sy=flr(self.x/8),flr(self.y/8)
+   lowest,tx,ty=m.dmap[sx][sy],0,0
+	  if (m.dmap[sx][sy+1]<lowest) then
+--    printh("lowest n:".. m.dmap[sx][sy+1])
+--	   printh("sx sy" .. sx .. " " .. sy+1)
+	   lowest,tx,ty=m.dmap[sx][sy+1],sx,sy+1
 	  end
- end,
+	  if (m.dmap[sx][sy-1]<lowest) then
+--	    printh("lowest s:".. m.dmap[sx][sy-1])
+--	    printh("sx sy" .. sx .. " " .. sy-1)
+	   lowest,tx,ty=m.dmap[sx][sy-1],sx,sy-1
+	  end
+	  if (m.dmap[sx+1][sy]<lowest) then     
+--	     printh("lowest e:".. m.dmap[sx+1][sy])
+--	     printh("sx sy" .. sx+1 .. " " .. sy)
+    lowest,tx,ty=m.dmap[sx+1][sy],sx+1,sy
+   end
+   if (m.dmap[sx-1][sy]<lowest) then 	     
+    lowest,tx,ty=m.dmap[sx-1][sy],sx-1,sy
+--	     printh("lowest w:".. m.dmap[sx-1][sy])
+--	     printh("sx sy" .. sx-1 .. " " .. sy)
+   end
+   self.target.x,self.target.y=tx,ty
+   self.target.x*=8
+   self.target.y*=8
+  end
+	end,
  growtime=3.600, 
  update = function(self,start,current)
    self.m = dget(10) --get last m
@@ -217,51 +235,50 @@ m = { --map
   ty=0,
   t=false,--transition
   dmap={{}},--dijkstra map
-  calcmap=function(self)
-   local dmap={{}}
+  tmap={{}},
+  cmap={{}},
+  skx={},
+  sky={},
+  ctmap=function(self)
    for x=0,self.bounds[3] do
     ty={}
+    cy={}
     for y=0,self.bounds[4] do
      ty[y]=30000
+     cy[y]=not fget(mget(x,y),0) 
     end
-    dmap[x]=ty
+    self.cmap[x]=cy
+    self.tmap[x]=ty
    end
+  end,
+  calcmap=function(self)
+   local dmap=self.tmap
    dmap[flr(p.x/8)][flr(p.y/7)]=0
-   nochange=false
    repeat
     ccount=0
     for x=self.cx/8,(self.cx+127)/8 do
      for y=self.cy/8,(self.cy+127)/8 do
-      if not fget(mget(x,y),0) 
-      and dmap[x][y]>0 then
-       --not wall nor player
-       c=dmap[x][y]
-       u=dmap[x][y+1]
-       d=dmap[x][y-1]
-       r=dmap[x+1][y]
-       l=dmap[x-1][y]
-       lowest=c
-       printh("lets start, c:"..lowest)
-       lowest=min(lowest,u)
-       printh(lowest)
-       lowest=min(lowest,d)
-       printh(lowest)
-       lowest=min(lowest,l)
-       printh(lowest)
-       lowest=min(lowest,r)
-       printh(lowest)
-       --skip if change set
-        --set current to +1 lowest if true
-       lowest+=1
-       if (c>lowest) then
-        ccount+=1
-        dmap[x][y]=lowest
-        printh("final:"..dmap[x][y])
-       end
+      if self.cmap[x][y] then 
+	      if dmap[x][y]>0 then
+	       --not wall nor player
+	       c=dmap[x][y]
+	
+	       lowest=c
+	       lowest=min(lowest,dmap[x][y+1])
+	       lowest=min(lowest,dmap[x][y-1])
+	       lowest=min(lowest,dmap[x+1][y])
+	       lowest=min(lowest,dmap[x-1][y])
+	       --skip if change set
+	        --set current to +1 lowest if true
+	       lowest+=1
+	       if (c>lowest) then
+	        ccount+=1
+	        dmap[x][y]=lowest
+	       end
+	      end
       end
      end
     end
-    printh(ccount)
    until ccount==0
    self.dmap=dmap
   end,
@@ -288,6 +305,7 @@ m = { --map
       self.cx-=128
       p.x-=16
      end
+     self:ctmap()
     else
      self.t=false 
          
@@ -604,6 +622,9 @@ timescale=1
 stime={}
 ctime={}
 timeset=0
+delta=0
+dp=0
+dc=0
 mapbounds={
 x1=0,
 y1=0,
