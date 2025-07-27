@@ -8,6 +8,8 @@ end
 
 function _draw()
  cls()
+ print("press ⬆️ to rotate up")
+ print("press ⬇️ to rotate down (broken)")
  x=32
  y=32
  w=64
