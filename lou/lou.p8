@@ -404,6 +404,7 @@ end
 
 --menu
 menu={
+ --menu.tracks
  tracks={
 	 {
 	  n=0,
@@ -414,6 +415,7 @@ menu={
 	  l=127
 	 },
 	},
+	--menu.items
  items={
 	 {
 	  text="play",
@@ -470,12 +472,14 @@ menu={
 	speaktimer=0,
 	selected=1,
 	bg=12,
+	--menu:init()
 	init=function(self)
-	async(function()
-  fadein()
-  end)
-	 bgm:set(self.tracks)
+		async(function()
+	  fadein()
+	  end)
+		 bgm:set(self.tracks)
 	end,
+	--menu:update()
 	update=function(self)
 	 if btnp(⬆️) then
 	  self:up()
@@ -490,6 +494,7 @@ menu={
 	  end)
 	 end
 	end,
+	--menu:draw
 	draw=function(self)
 	 rectfill(0,0,127,127,self.bg)
 	 map()
@@ -502,6 +507,7 @@ menu={
 	 rectfill(89,9,104,23,2)
 	 self:drawlou()
 	end,
+	--menu:drawlou
 	drawlou=function(self)
 	  if self.speaktimer>0 then
 	   local sen = lou.sentence
@@ -516,6 +522,7 @@ menu={
 	  92+(cos(time()*.12)*lou.strength),
 	  14-(sin(time()*.08)*lou.strength))
 	end,
+	--menu:up
 	up=function(self)
 	 sfx(30)
 	 t={h=-1,v=self.selected}
@@ -527,6 +534,7 @@ menu={
 	 end 
 	 self.selected=t.v
 	end,
+	--menu:down
 	down=function(self)
 	 sfx(30)
 	 t={h=32000,v=self.selected}
@@ -536,16 +544,13 @@ menu={
 	  end
 	 end
 	 self.selected=t.v 
-	end,
-	x=function(self)
-	end,
-	o=function(self)
 	end
 }
 
 
 --play
 play={
+ --play.tracks
  tracks={
   {
    n=2,
@@ -553,6 +558,7 @@ play={
   },
  },
  currentgame=1,
+ --play:init
  init=function(self)
   async(function()
   fadein()
@@ -560,12 +566,15 @@ play={
   bgm:set(self.tracks)
   currentgame=1 --make this random later
  end,
+ --play:update
  update=function(self)
   games[self.currentgame]:update()
  end,
+ --play:draw
  draw=function(self)
   games[self.currentgame]:draw()
  end,
+ --play:win
  win=function(self)
   cs=1  
  end,
